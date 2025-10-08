@@ -147,28 +147,30 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
   // ====== 加载数据 ======
   async function loadTable() {
-    const { data, error } = await supabase.from("customers").select("*").order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("customers").select("*").order("created", { ascending: false });
     if (error) return alert("加载失败：" + error.message);
     renderTable(data);
   }
 
-  // ====== 显示表格 ======
-  function renderTable(data) {
-    tbody.innerHTML = "";
-    data.forEach(row => {
-      const tr = document.createElement("tr");
-      let displayPhone = row.phone || "";
-      if (!isAdmin) displayPhone = "*****" + displayPhone.slice(-5);
-      tr.innerHTML = `
-        <td>${row.name || ''}</td>
-        <td>${displayPhone}</td>
-        <td>${row.store || ''}</td>
-        <td>${row.kiss || ''}</td>
-        <td>${row.mega || ''}</td>
-        <td>${row.pussy || ''}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
+// ====== 显示表格 ======
+function renderTable(data) {
+  tbody.innerHTML = "";
+  data.forEach(row => {
+    const tr = document.createElement("tr");
+    let displayPhone = row.phone || "";
+    if (!isAdmin) displayPhone = "*****" + displayPhone.slice(-5);
+    tr.innerHTML = `
+      <td>${row.name || ''}</td>
+      <td>${displayPhone}</td>
+      <td>${row.store || ''}</td>
+      <td>${row.kiss_id || ''}</td>
+      <td>${row.mega_id || ''}</td>
+      <td>${row.pussy_id || ''}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
 
   // ====== 保存数据 ======
   document.getElementById("saveBtn").onclick = async () => {
@@ -233,4 +235,5 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 </script>
 </body>
 </html>
+
 
