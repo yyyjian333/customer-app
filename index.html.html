@@ -145,12 +145,15 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
     loginPage.classList.remove("hidden");
   };
 
-  // ====== 加载数据 ======
-  async function loadTable() {
-    const { data, error } = await supabase.from("customers").select("*").order("created", { ascending: false });
-    if (error) return alert("加载失败：" + error.message);
-    renderTable(data);
-  }
+// ====== 加载数据 ======
+async function loadTable() {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .order("created", { ascending: false });
+  if (error) return alert("加载失败: " + error.message);
+  renderTable(data);
+}
 
 // ====== 显示表格 ======
 function renderTable(data) {
@@ -159,6 +162,7 @@ function renderTable(data) {
     const tr = document.createElement("tr");
     let displayPhone = row.phone || "";
     if (!isAdmin) displayPhone = "*****" + displayPhone.slice(-5);
+
     tr.innerHTML = `
       <td>${row.name || ''}</td>
       <td>${displayPhone}</td>
@@ -166,31 +170,63 @@ function renderTable(data) {
       <td>${row.kiss_id || ''}</td>
       <td>${row.mega_id || ''}</td>
       <td>${row.pussy_id || ''}</td>
+      ${isAdmin ? `<td><button class="danger del-btn" data-id="${row.id}">删除</button></td>` : ``}
     `;
     tbody.appendChild(tr);
   });
 }
 
+// ====== 表头添加“操作”列（仅管理员） ======
+if (isAdmin) {
+  const headRow = document.querySelector('#customerTable thead tr');
+  if (headRow && !headRow.querySelector('th.op')) {
+    const th = document.createElement('th');
+    th.className = 'op';
+    th.textContent = '操作';
+    headRow.appendChild(th);
+  }
+}
 
-  // ====== 保存数据 ======
-  document.getElementById("saveBtn").onclick = async () => {
-    const name = document.getElementById("name").value.trim();
-    const phone = document.getElementById("phone").value.trim();
-    const store = document.getElementById("store").value.trim();
-    const kiss = document.getElementById("kiss").value.trim();
-    const mega = document.getElementById("mega").value.trim();
-    const pussy = document.getElementById("pussy").value.trim();
-    if (!name || !phone) return alert("姓名与手机号为必填项！");
-    const { error } = await supabase.from("customers").insert([{ name, phone, store, kiss, mega, pussy }]);
-    if (error) return alert("保存失败：" + error.message);
-    alert("保存成功！");
-    document.getElementById("name").value = "";
-    document.getElementById("phone").value = "";
-    document.getElementById("kiss").value = "";
-    document.getElementById("mega").value = "";
-    document.getElementById("pussy").value = "";
-    loadTable();
-  };
+// ====== 表格上的事件代理：点击“删除” ======
+tbody.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.del-btn');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  if (!id) return;
+  if (!confirm('确定要删除这条记录吗？')) return;
+
+  const { error } = await supabase.from('customers').delete().eq('id', id);
+  if (error) return alert('删除失败：' + error.message);
+  loadTable();
+});
+
+// ====== 保存数据 ======
+document.getElementById("saveBtn").onclick = async () => {
+  const name  = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const store = document.getElementById("store").value.trim();
+  const kiss  = document.getElementById("kiss").value.trim();
+  const mega  = document.getElementById("mega").value.trim();
+  const pussy = document.getElementById("pussy").value.trim();
+
+  if (!name || !phone) return alert("姓名与手机号为必填项！");
+
+  const { error } = await supabase.from("customers").insert([{
+    name,
+    phone,
+    store,
+    kiss_id:  kiss,
+    mega_id:  mega,
+    pussy_id: pussy,
+    created:  new Date().toISOString()   // 你的表里是 created（不是 created_at）
+  }]);
+
+  if (error) return alert("保存失败：" + error.message);
+
+  alert("保存成功！");
+  ["name","phone","kiss","mega","pussy"].forEach(id => document.getElementById(id).value = "");
+  loadTable();
+};
 
   document.getElementById("resetBtn").onclick = () => {
     ["name","phone","kiss","mega","pussy"].forEach(id => document.getElementById(id).value = "");
@@ -235,5 +271,6 @@ function renderTable(data) {
 </script>
 </body>
 </html>
+
 
 
