@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>顾客会员记录 · Supabase（部署版）</title>
+  <style>
+    /* 简单样式（你可以按需替换） */
+    body{font-family:system-ui, -apple-system, 'Segoe UI', Roboto; background:#071225;color:#e6eef8;margin:0;padding:16px}
+    .card{background:#0f1724;padding:16px;border-radius:10px;margin-bottom:12px;border:1px solid #203040}
+    input,select,button,textarea{padding:8px;border-radius:6px;border:1px solid #2b3b4b;background:#071827;color:#e6eef8}
+    button{cursor:pointer}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:6px;border-bottom:1px solid #243341;text-align:left}
+    .hint{color:#9fb0c8;font-size:13px}
+    .small{font-size:12px;color:#9fb0c8}
+    .badge{background:#0b2a1f;padding:4px 8px;border-radius:999px}
+    .danger{background:#5a1b1b;color:#ffdcdc}
+    .primary{background:#136f3d;color:#ffffff}
+  </style>
+</head>
+<body>
+  <h2>顾客会员记录 · Supabase 版</h2>
+  <div class="card">
+    <div class="small">当前 Supabase 项目（已写入）：</div>
+    <div class="hint" id="cfgHint"></div>
+  </div>
+
+  <!-- auth / register -->
+  <div class="card" id="authCard">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <strong>登录 / 注册</strong>
+        <div class="small">注册会成为待审批（管理员批准后可登录）</div>
+      </div>
+      <div id="userInfo" class="small"></div>
+    </div>
+
+    <div style="margin-top:8px">
+      <label>邮箱</label><br>
+      <input id="authEmail" placeholder="you@example.com" style="width:320px" />
+    </div>
+    <div style="margin-top:8px">
+      <button id="btnLogin" class="primary">邮箱+密码 登录（测试）</button>
+      <button id="btnShowRegister">注册申请</button>
+      <span class="hint" id="authHint"></span>
+    </div>
+
+    <div id="registerBox" style="margin-top:10px;display:none">
+      <hr>
+      <label>姓名</label><br><input id="regName" style="width:320px" />
+      <label style="margin-top:8px">邮箱</label><br><input id="regEmail" style="width:320px" />
+      <label style="margin-top:8px">备注（选填）</label><br><input id="regNote" style="width:320px" />
+      <div style="margin-top:8px">
+        <button id="btnRegister" class="primary">提交注册申请</button>
+        <button id="btnCancelRegister">取消</button>
+        <span class="hint" id="regHint"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- app area -->
+  <div id="appArea" style="display:none">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><strong>顾客管理</strong><div class="small">新增 / 搜索 / 导出（只有管理员可导出）</div></div>
+        <div>
+          <span id="who" class="badge"></span>
+          <button id="btnLogout">退出</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="row">
+          <div style="flex:1">
+            <label>姓名 *</label><br><input id="name" style="width:100%" />
+          </div>
+          <div style="width:240px">
+            <label>手机 *</label><br><input id="phone" style="width:100%" />
+          </div>
+          <div style="width:180px">
+            <label>门店</label><br>
+            <select id="store"><option>TP-KPIDH</option><option>TP-TSP</option></select>
+          </div>
+        </div>
+
+        <div style="margin-top:8px" class="row">
+          <div style="flex:1">
+            <label>KISS ID（创建后视为固定）</label><br><input id="kissId" style="width:100%" />
+          </div>
+          <div style="flex:1">
+            <label>KISS 备注</label><br><input id="kissNote" style="width:100%" />
+          </div>
+          <div style="flex:1">
+            <label>MEGA ID</label><br><input id="megaId" style="width:100%" />
+          </div>
+        </div>
+
+        <div style="margin-top:8px" class="row">
+          <div style="flex:1">
+            <label>PUSSY ID（创建后固定）</label><br><input id="pussyId" style="width:100%" />
+          </div>
+          <div style="flex:1">
+            <label>PUSSY 备注</label><br><input id="pussyNote" style="width:100%" />
+          </div>
+          <div style="flex:1">
+            <label>MEGA 备注</label><br><input id="megaNote" style="width:100%" />
+          </div>
+        </div>
+
+        <div style="margin-top:8px" class="row">
+          <button id="saveBtn" class="primary">保存</button>
+          <button id="resetBtn">清空表单</button>
+          <span class="hint" id="formHint"></span>
+        </div>
+      </div>
+
+      <hr>
+
+      <div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="search" placeholder="搜索姓名或手机" style="flex:1" />
+          <select id="filterStore"><option value="ALL">全部</option><option>TP-KPIDH</option><option>TP-TSP</option></select>
+          <div id="adminButtons" style="display:none">
+            <button id="exportJson">导出 JSON</button>
+            <button id="exportCsv">导出 CSV</button>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;overflow:auto;max-height:360px">
+          <table><thead><tr><th>姓名</th><th>手机</th><th>门店</th><th>KISS ID</th><th>KISS备注</th><th>MEGA ID</th><th>PUSSY ID</th><th>操作</th></tr></thead>
+          <tbody id="tbody"></tbody></table>
+        </div>
+
+        <div class="small" id="stats"></div>
+      </div>
+    </div>
+
+    <!-- 管理员审批区域 -->
+    <div id="approvePanel" class="card" style="display:none">
+      <strong>注册申请审批（管理员专用）</strong>
+      <div id="pendingList" style="margin-top:8px"></div>
+      <div class="small">注意：点击批准会调用后端接口，后端使用 Supabase service_role key 创建真实 Auth 用户。</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    /* ------------------------
+       这里写入你的 Supabase 信息（已用你提供的）
+       ------------------------ */
+    const SUPABASE_URL = "https://ozxwxzafxxkedrotzqmu.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96eHd4emFmeHhrZWRyb3R6cW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MzM1NzQsImV4cCI6MjA3NTUwOTU3NH0.ItAWcNehzvrc7jHZqeOO2HaABAZ36eC64_Xq1TIB_Mk";
+    const SUPER_ADMIN = "yyyjian96996@gmail.com";
+    // 同时请在 Vercel 后端环境变量中设置 SUPABASE_SERVICE_ROLE_KEY（服务密钥）和 ADMIN_APPROVE_SECRET（审批 secret）
+
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // UI 元素
+    const el = id => document.getElementById(id);
+    el('cfgHint').textContent = `SUPABASE_URL=${SUPABASE_URL} · ANON_KEY=(已写入) · 管理员=${SUPER_ADMIN}`;
+
+    // state
+    let currentUser = null;
+    let db = [];
+
+    // util
+    const onlyDigits = s => (s||'').replace(/\D+/g,'');
+    const validPhone = s => /^\d{7,15}$/.test(s);
+    const escapeHtml = s => String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+
+    // ---------- auth ----------
+    el('btnShowRegister').addEventListener('click', ()=>{ el('registerBox').style.display='block'; });
+    el('btnCancelRegister').addEventListener('click', ()=>{ el('registerBox').style.display='none'; });
+
+    // login (email+password)
+    el('btnLogin').addEventListener('click', async ()=>{
+      const email = (el('authEmail').value||'').trim(); if(!email) return el('authHint').textContent='请输入邮箱';
+      const pwd = prompt('请输入密码（测试用）'); if(!pwd) return el('authHint').textContent='未输入密码';
+      el('authHint').textContent = '登录中…';
+      const { data, error } = await sb.auth.signInWithPassword({ email, password: pwd });
+      if(error){ el('authHint').textContent = '登录失败：'+error.message; return; }
+      currentUser = data.user; onLogin();
+    });
+
+    // submit registration -> write to pending_signups
+    el('btnRegister').addEventListener('click', async ()=>{
+      const name = (el('regName').value||'').trim(); const email = (el('regEmail').value||'').trim(); const note = (el('regNote').value||'').trim();
+      if(!name || !email) return el('regHint').textContent='姓名/邮箱必填';
+      el('regHint').textContent='提交中…';
+      const { error } = await sb.from('pending_signups').insert([{ name, email, note, status: 'pending', created_at: new Date().toISOString() }]);
+      if(error){ el('regHint').textContent='提交失败：'+error.message; return; }
+      el('regHint').textContent='已提交，等待管理员审批';
+    });
+
+    // onLogin (after successful signIn)
+    async function onLogin(){
+      el('authCard').style.display='none';
+      el('appArea').style.display='block';
+      el('who').textContent = currentUser.email;
+      const isAdmin = (currentUser.email||'').toLowerCase() === SUPER_ADMIN.toLowerCase();
+      el('adminButtons').style.display = isAdmin ? 'inline-block' : 'none';
+      el('approvePanel').style.display = isAdmin ? 'block' : 'none';
+      // load data
+      await loadCustomers();
+      if(isAdmin) await loadPending();
+    }
+
+    // check existing session on page load
+    (async function init(){
+      const { data } = await sb.auth.getSession();
+      if(data.session && data.session.user){ currentUser = data.session.user; await onLogin(); }
+    })();
+
+    el('btnLogout').addEventListener('click', async ()=>{ await sb.auth.signOut(); location.reload(); });
+
+    // ---------- customers CRUD ----------
+    async function loadCustomers(){
+      const { data, error } = await sb.from('customers').select('*').order('created', { ascending: false });
+      if(error){ console.error('加载顾客失败', error); return; }
+      db = data || []; renderTable(currentView());
+    }
+
+    function renderTable(list){
+      const tbody = el('tbody'); tbody.innerHTML='';
+      if(!list || list.length===0){ tbody.innerHTML = '<tr><td colspan="8">暂无数据</td></tr>'; el('stats').textContent=''; return;}
+      for(const r of list){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.phone)}</td><td>${escapeHtml(r.store)}</td><td>${escapeHtml(r.kiss_id||'')}</td><td>${escapeHtml(r.kiss_note||'')}</td><td>${escapeHtml(r.mega_id||'')}</td><td>${escapeHtml(r.pussy_id||'')}</td><td><button data-id="${r.id}" data-act="edit">编辑</button>${(currentUser && currentUser.email.toLowerCase()===SUPER_ADMIN.toLowerCase())?` <button data-id="${r.id}" data-act="del" class="danger">删除</button>`:''}</td>`;
+        tbody.appendChild(tr);
+      }
+      el('stats').textContent = `共 ${db.length} 条`;
+      // bind
+      tbody.querySelectorAll('button').forEach(b=>b.addEventListener('click', onTableAction));
+    }
+
+    function currentView(){
+      const q = (el('search').value||'').trim().toLowerCase();
+      const fs = el('filterStore').value;
+      let list = db.slice();
+      if(fs !== 'ALL') list = list.filter(r => r.store === fs);
+      if(q){ const d = onlyDigits(q); list = list.filter(r => r.name.toLowerCase().includes(q) || r.phone.includes(d)); }
+      return list;
+    }
+
+    el('search').addEventListener('input', ()=> renderTable(currentView()));
+    el('filterStore').addEventListener('change', ()=> renderTable(currentView()));
+
+    el('saveBtn').addEventListener('click', async ()=>{
+      const name = (el('name').value||'').trim(); const phone = onlyDigits(el('phone').value||''); const store = el('store').value;
+      const kissId = (el('kissId').value||'').trim(); const kissNote = (el('kissNote').value||'').trim();
+      const megaId = (el('megaId').value||'').trim(); const megaNote = (el('megaNote').value||'').trim();
+      const pussyId = (el('pussyId').value||'').trim(); const pussyNote = (el('pussyNote').value||'').trim();
+      if(!name||!phone) return el('formHint').textContent='姓名/手机必填';
+      if(!validPhone(phone)) return el('formHint').textContent='手机号格式不对';
+      // insert
+      const payload = { name, phone, store, kiss_id:kissId, kiss_note:kissNote, mega_id:megaId, mega_note:megaNote, pussy_id:pussyId, pussy_note:pussyNote, created: new Date().toISOString() };
+      const { error } = await sb.from('customers').insert([payload]);
+      if(error){ el('formHint').textContent='保存失败：'+error.message; return; }
+      el('formHint').textContent='已保存';
+      await loadCustomers();
+    });
+
+    el('resetBtn').addEventListener('click', ()=>{ ['name','phone','store','kissId','kissNote','megaId','megaNote','pussyId','pussyNote'].forEach(id=>el(id).value=''); el('formHint').textContent=''; });
+
+    function onTableAction(e){
+      const btn = e.currentTarget; const id = btn.getAttribute('data-id'); const act = btn.getAttribute('data-act');
+      if(act==='del'){ if(!confirm('确定删除？')) return; deleteCustomer(id); }
+      if(act==='edit'){ editCustomer(id); }
+    }
+
+    async function deleteCustomer(id){
+      const { error } = await sb.from('customers').delete().eq('id', id);
+      if(error) return alert('删除失败：'+error.message);
+      await loadCustomers();
+    }
+
+    async function editCustomer(id){
+      const r = db.find(x=>x.id===id); if(!r) return;
+      // 简易编辑：将数据填回到表单，管理员可编辑全部，普通用户只能编辑备注
+      el('name').value = r.name; el('phone').value = r.phone; el('store').value = r.store;
+      el('kissId').value = r.kiss_id||''; el('kissNote').value=r.kiss_note||''; el('megaId').value=r.mega_id||''; el('megaNote').value=r.mega_note||''; el('pussyId').value=r.pussy_id||''; el('pussyNote').value=r.pussy_note||'';
+      // when save, naive approach: delete old then reinsert? Simpler: update by id
+      const newSaveHandler = async ()=>{
+        const isAdmin = currentUser && currentUser.email.toLowerCase()===SUPER_ADMIN.toLowerCase();
+        if(isAdmin){
+          const updated = { name:el('name').value.trim(), phone:onlyDigits(el('phone').value||''), store:el('store').value,
+            kiss_id:el('kissId').value.trim(), kiss_note:el('kissNote').value.trim(),
+            mega_id:el('megaId').value.trim(), mega_note:el('megaNote').value.trim(),
+            pussy_id:el('pussyId').value.trim(), pussy_note:el('pussyNote').value.trim()
+          };
+          const { error } = await sb.from('customers').update(updated).eq('id', id);
+          if(error) return alert('更新失败：'+error.message);
+        } else {
+          // ordinary user: only update notes
+          const updated = { kiss_note:el('kissNote').value.trim(), mega_note:el('megaNote').value.trim(), pussy_note:el('pussyNote').value.trim() };
+          const { error } = await sb.from('customers').update(updated).eq('id', id);
+          if(error) return alert('更新失败：'+error.message);
+        }
+        await loadCustomers();
+        el('saveBtn').removeEventListener('click', newSaveHandler); // cleanup
+      };
+      // temporarily override save button to act as update
+      el('saveBtn').addEventListener('click', newSaveHandler, { once:true });
+      alert('已将数据载入表单。修改后点击「保存」来提交（管理员可修改所有字段，普通账号只能修改备注）。');
+    }
+
+    // ---------- export ----------
+    el('exportJson').addEventListener('click', ()=>{ if(!currentUser || currentUser.email.toLowerCase()!==SUPER_ADMIN.toLowerCase()) return alert('只有管理员可以导出'); download(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),'customers.json'); });
+    el('exportCsv').addEventListener('click', ()=>{ if(!currentUser || currentUser.email.toLowerCase()!==SUPER_ADMIN.toLowerCase()) return alert('只有管理员可以导出'); const header=['姓名','手机','门店','KISS ID','KISS备注','MEGA ID','MEGA备注','PUSSY ID','PUSSY备注']; const rows = db.map(r=>[r.name,r.phone,r.store,r.kiss_id||'',r.kiss_note||'',r.mega_id||'',r.mega_note||'',r.pussy_id||'',r.pussy_note||'']); const csv=[header,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\\n'); download(new Blob(["\\uFEFF"+csv],{type:'text/csv'}),'customers.csv'); });
+
+    function download(blob, filename){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+
+    // ---------- pending approvals (admin) ----------
+    async function loadPending(){
+      const { data, error } = await sb.from('pending_signups').select('*').eq('status','pending').order('created_at',{ascending:true});
+      if(error){ console.error('加载申请失败', error); return; }
+      const container = el('pendingList'); container.innerHTML='';
+      if(!data || data.length===0) container.innerHTML = '<div class="small">暂无待审批</div>';
+      for(const p of data){
+        const div = document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between'; div.style.marginBottom='8px';
+        div.innerHTML = `<div><strong>${escapeHtml(p.name)}</strong> · ${escapeHtml(p.email)}<div class="small">${escapeHtml(p.note||'')}</div></div>`;
+        const btns = document.createElement('div');
+        const btnA = document.createElement('button'); btnA.textContent='批准'; btnA.className='primary';
+        btnA.addEventListener('click', ()=> approveSignup(p.id));
+        const btnR = document.createElement('button'); btnR.textContent='拒绝'; btnR.style.marginLeft='6px';
+        btnR.addEventListener('click', ()=> rejectSignup(p.id));
+        btns.appendChild(btnA); btns.appendChild(btnR);
+        div.appendChild(btns); container.appendChild(div);
+      }
+    }
+
+    // approveSignup calls your Vercel serverless function /api/approve
+    async function approveSignup(pendingId){
+      if(!confirm('确认批准该注册？')) return;
+      // ADMIN_APPROVE_SECRET is stored in Vercel env and must be provided by frontend when admin calls approval
+      // We'll prompt the admin to paste the secret (this avoids storing secret in frontend in code)
+      const secret = prompt('请输入管理员审批密钥（由部署时设置）');
+      if(!secret) return alert('审批已取消（未输入密钥）');
+      try{
+        const res = await fetch('/api/approve', {
+          method:'POST',
+          headers:{ 'content-type':'application/json' },
+          body: JSON.stringify({ pendingId, adminSecret: secret })
+        });
+        const j = await res.json();
+        if(!res.ok) throw new Error(j.message || '审批失败');
+        alert('已批准，用户已创建');
+        await loadPending();
+      }catch(err){ alert('审批失败：'+err.message); }
+    }
+
+    async function rejectSignup(pendingId){
+      if(!confirm('确认拒绝该申请？')) return;
+      const { error } = await sb.from('pending_signups').update({ status:'rejected', processed_at: new Date().toISOString() }).eq('id', pendingId);
+      if(error) return alert('拒绝失败：'+error.message);
+      await loadPending();
+    }
+
+    // init data load functions after login etc
+    async function initAfterLogin(){
+      await loadCustomers();
+      if(currentUser && currentUser.email.toLowerCase()===SUPER_ADMIN.toLowerCase()) await loadPending();
+    }
+
+  </script>
+</body>
+</html>
