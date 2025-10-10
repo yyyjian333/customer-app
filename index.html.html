@@ -1,116 +1,11 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>顾客会员记录 · Supabase 版</title>
-  <style>
-    :root{
-      --bg:#0f172a;
-      --panel:#111827;
-      --muted:#1f2937;
-      --text:#e5e7eb;
-      --sub:#94a3b8;
-      --accent:#22c55e;
-      --accent-2:#3b82f6;
-      --danger:#ef4444;
-      --warn:#f59e0b;
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:linear-gradient(180deg,#0b1220,#111827);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
-    header{position:sticky;top:0;background:rgba(15,23,42,.9);backdrop-filter:blur(6px);border-bottom:1px solid #1f2937;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;z-index:10}
-    h1{font-size:20px}
-    button,select,input{font-family:inherit}
-    button{cursor:pointer;border:none;border-radius:10px;padding:8px 14px;font-weight:600}
-    button.primary{background:var(--accent);color:#001b0e}
-    button.danger{background:var(--danger);color:#fff}
-    button.secondary{background:var(--accent-2);color:#fff}
-    main{max-width:1100px;margin:20px auto;padding:0 20px;display:grid;gap:20px}
-    .card{background:var(--panel);border:1px solid #1f2937;border-radius:16px;padding:20px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
-    label{font-size:13px;color:var(--sub);margin-bottom:5px;display:block}
-    input,select{width:100%;padding:10px 12px;background:var(--muted);color:var(--text);border:1px solid #334155;border-radius:10px}
-    .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{border-bottom:1px solid #1f2937;padding:10px;text-align:left}
-    th{color:#cbd5e1}
-    .hidden{display:none}
-    #langSwitch{background:var(--muted);color:var(--text);border:1px solid #334155;border-radius:10px;padding:6px 10px;cursor:pointer}
-    .loginBox{max-width:400px;margin:60px auto;background:var(--panel);border-radius:16px;padding:20px;border:1px solid #1f2937;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.3)}
-    .loginBox input{margin-bottom:10px}
-  </style>
-</head>
-<body>
-  <header>
-    <h1 id="titleText">顾客会员记录</h1>
-    <button id="langSwitch">切换至 Malay 🇲🇾</button>
-  </header>
-
-  <main id="loginPage">
-    <div class="loginBox">
-      <h2 id="loginTitle">登录系统</h2>
-      <input id="email" type="email" placeholder="邮箱" />
-      <input id="password" type="password" placeholder="密码" />
-      <button id="loginBtn" class="primary">登录</button>
-      <p style="color:var(--sub);margin-top:10px" id="loginHint">没有账号？请联系管理员注册</p>
-    </div>
-  </main>
-
-  <main id="appPage" class="hidden">
-    <section class="card">
-      <h2 id="formTitle">新增 / 编辑顾客</h2>
-      <div class="row">
-        <div><label>姓名</label><input id="name"></div>
-        <div><label>手机号</label><input id="phone"></div>
-        <div><label>门店</label>
-          <select id="store">
-            <option value="TP-KPIDH">TP-KPIDH</option>
-            <option value="TP-TSP">TP-TSP</option>
-          </select>
-        </div>
-      </div>
-      <div class="row" style="margin-top:10px">
-        <div><label>KISS ID</label><input id="kiss"></div>
-        <div><label>MEGA ID</label><input id="mega"></div>
-        <div><label>PUSSY ID</label><input id="pussy"></div>
-      </div>
-      <div style="margin-top:12px">
-        <button id="saveBtn" class="primary">保存</button>
-        <button id="resetBtn" class="secondary">清空</button>
-      </div>
-    </section>
-
-    <section class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <h2 id="listTitle">顾客列表</h2>
-        <button id="logoutBtn" class="danger">退出</button>
-      </div>
-      <input id="search" placeholder="搜索姓名或号码..." style="margin:10px 0;width:100%;padding:8px">
-      <div style="overflow:auto">
-        <table id="customerTable">
-          <thead>
-            <tr>
-              <th>姓名</th>
-              <th>手机号</th>
-              <th>门店</th>
-              <th>KISS ID</th>
-              <th>MEGA ID</th>
-              <th>PUSSY ID</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
 <script type="module">
   // ====== Supabase 初始化 ======
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-  // ⚠️ 这两行用你的真实项目配置（下面是你之前给我的值；如已改动请替换为你现在的）
+  // !!! 按你的实际值填写（下面用的是你现在项目的值）
   const SUPABASE_URL = 'https://ozxwxzafxxkedrotzqmu.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96eHd4emFmeHhrZWRyb3R6cW11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk5MzM1NzQsImV4cCI6MjA3NTUwOTU3NH0.ItAWcNehzvrc7jHZqeOO2HaABAZ36eC64_Xq1TIB_Mk';
-  const SUPER_ADMIN = 'yyyjian96996@gmail.com';
+  const SUPER_ADMIN  = 'yyyjian96996@gmail.com'; // 仅用于显示“删除”按钮
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -119,6 +14,17 @@
   const appPage   = document.getElementById('appPage');
   const loginBtn  = document.getElementById('loginBtn');
   const logoutBtn = document.getElementById('logoutBtn');
+
+  const saveBtn   = document.getElementById('saveBtn');
+  const resetBtn  = document.getElementById('resetBtn');
+
+  const nameInput  = document.getElementById('name');
+  const phoneInput = document.getElementById('phone');
+  const storeSel   = document.getElementById('store');
+  const kissInput  = document.getElementById('kiss');
+  const megaInput  = document.getElementById('mega');
+  const pussyInput = document.getElementById('pussy');
+
   const tbody     = document.getElementById('tbody');
   const searchBox = document.getElementById('search');
   const langSwitch= document.getElementById('langSwitch');
@@ -126,10 +32,10 @@
   // ====== 状态 ======
   let currentUser = null;
   let isAdmin = false;
-  let allRows = [];     // 最近一次加载的完整数据
+  let allRows = [];               // 最近一次加载的完整数据
   let currentLang = 'zh';
 
-  // ====== 语言切换（中 / 马） ======
+  // ====== 语言切换（中文 / 马来文） ======
   const langText = {
     zh: {
       title: "顾客会员记录",
@@ -155,16 +61,17 @@
 
   function applyLang() {
     const t = langText[currentLang];
-    document.getElementById("titleText").innerText   = t.title;
-    document.getElementById("loginTitle").innerText  = t.login;
-    document.getElementById("loginHint").innerText   = t.loginHint;
-    document.getElementById("saveBtn").innerText     = t.save;
-    document.getElementById("resetBtn").innerText    = t.clear;
-    document.getElementById("logoutBtn").innerText   = t.logout;
-    document.getElementById("listTitle").innerText   = t.list;
-    langSwitch.innerText = t.switch;
+    const byId = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = txt; };
+    byId("titleText",  t.title);
+    byId("loginTitle", t.login);
+    byId("loginHint",  t.loginHint);
+    byId("saveBtn",    t.save);
+    byId("resetBtn",   t.clear);
+    byId("logoutBtn",  t.logout);
+    byId("listTitle",  t.list);
+    if (langSwitch) langSwitch.innerText = t.switch;
   }
-  langSwitch.onclick = () => { currentLang = currentLang === 'zh' ? 'ms' : 'zh'; applyLang(); }
+  if (langSwitch) langSwitch.onclick = () => { currentLang = currentLang === 'zh' ? 'ms' : 'zh'; applyLang(); };
 
   // ====== 会话自动恢复 ======
   (async () => {
@@ -180,44 +87,51 @@
 
   function showLogin() {
     applyLang();
-    appPage.classList.add('hidden');
-    loginPage.classList.remove('hidden');
+    if (appPage)   appPage.classList.add('hidden');
+    if (loginPage) loginPage.classList.remove('hidden');
   }
   function showApp() {
     applyLang();
-    loginPage.classList.add('hidden');
-    appPage.classList.remove('hidden');
-    // 管理员：在表头追加“操作”列（只加一次）
-    if (isAdmin) {
-      const headRow = document.querySelector('#customerTable thead tr');
-      if (headRow && !headRow.querySelector('th.op')) {
-        const th = document.createElement('th');
-        th.className = 'op';
-        th.textContent = '操作';
-        headRow.appendChild(th);
-      }
+    if (loginPage) loginPage.classList.add('hidden');
+    if (appPage)   appPage.classList.remove('hidden');
+
+    // 表头添加「操作」列（所有用户都显示一次）
+    const headRow =
+      document.querySelector('#customerTable thead tr') ||
+      document.querySelector('#table thead tr') ||
+      document.querySelector('table thead tr');
+    if (headRow && !headRow.querySelector('th.op')) {
+      const th = document.createElement('th');
+      th.className = 'op';
+      th.textContent = '操作';
+      headRow.appendChild(th);
     }
+
     loadTable();
   }
 
   // ====== 登录 / 登出 ======
-  loginBtn.onclick = async () => {
-    const email = (document.getElementById('email').value || '').trim();
-    const password = (document.getElementById('password').value || '').trim();
-    if (!email || !password) return alert('请输入邮箱与密码！');
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return alert('登录失败：' + error.message);
-    currentUser = data.user;
-    isAdmin = (email || '').toLowerCase() === SUPER_ADMIN.toLowerCase();
-    showApp();
-  };
+  if (loginBtn) {
+    loginBtn.onclick = async () => {
+      const email = (document.getElementById('email').value || '').trim();
+      const password = (document.getElementById('password').value || '').trim();
+      if (!email || !password) return alert('请输入邮箱与密码！');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return alert('登录失败：' + error.message);
+      currentUser = data.user;
+      isAdmin = (email || '').toLowerCase() === SUPER_ADMIN.toLowerCase();
+      showApp();
+    };
+  }
 
-  logoutBtn.onclick = async () => {
-    await supabase.auth.signOut();
-    currentUser = null;
-    isAdmin = false;
-    showLogin();
-  };
+  if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+      await supabase.auth.signOut();
+      currentUser = null;
+      isAdmin = false;
+      showLogin();
+    };
+  }
 
   // ====== 载入数据 ======
   async function loadTable() {
@@ -232,7 +146,7 @@
 
   // ====== 搜索过滤（姓名/手机号；手机号用原始值匹配，渲染时再脱敏） ======
   function filterAndRender() {
-    const q = (searchBox.value || '').trim().toLowerCase();
+    const q = (searchBox?.value || '').trim().toLowerCase();
     if (!q) return renderTable(allRows);
     const digits = q.replace(/\D+/g, '');
     const filtered = allRows.filter(r => {
@@ -242,19 +156,28 @@
     });
     renderTable(filtered);
   }
-  searchBox.addEventListener('input', filterAndRender);
+  if (searchBox) searchBox.addEventListener('input', filterAndRender);
 
   // ====== 渲染表格 ======
   function renderTable(data) {
+    if (!tbody) return;
     tbody.innerHTML = '';
     (data || []).forEach(row => {
       const tr = document.createElement('tr');
+
       // 非管理员：手机号只显示后 5 位
       let displayPhone = String(row.phone || '');
       if (!isAdmin) {
         const last5 = displayPhone.slice(-5);
         displayPhone = '*****' + last5;
       }
+
+      // 操作按钮：所有人都有“编辑ID”；管理员额外有“删除”
+      const actions = isAdmin
+        ? `<button class="edit-btn" data-id="${row.id}">编辑ID</button>
+           <button class="danger del-btn" data-id="${row.id}">删除</button>`
+        : `<button class="edit-btn" data-id="${row.id}">编辑ID</button>`;
+
       tr.innerHTML = `
         <td>${row.name || ''}</td>
         <td>${displayPhone}</td>
@@ -262,55 +185,96 @@
         <td>${row.kiss_id || ''}</td>
         <td>${row.mega_id || ''}</td>
         <td>${row.pussy_id || ''}</td>
-        ${isAdmin ? `<td><button class="danger del-btn" data-id="${row.id}">删除</button></td>` : ``}
+        <td>${actions}</td>
       `;
       tbody.appendChild(tr);
     });
   }
 
-  // ====== 保存（任何账号都可写入 3 个 ID） ======
-  document.getElementById('saveBtn').onclick = async () => {
-    const name  = document.getElementById('name').value.trim();
-    const phone = document.getElementById('phone').value.trim();
-    const store = document.getElementById('store').value.trim();
-    const kiss  = document.getElementById('kiss').value.trim();
-    const mega  = document.getElementById('mega').value.trim();
-    const pussy = document.getElementById('pussy').value.trim();
-    if (!name || !phone) return alert('姓名与手机号为必填项！');
+  // ====== 保存（任何账号都可写入 3 个 ID；name/phone 只在新增时录入） ======
+  if (saveBtn) {
+    saveBtn.onclick = async () => {
+      const name  = nameInput?.value.trim();
+      const phone = phoneInput?.value.trim();
+      const store = storeSel?.value.trim();
+      const kiss  = kissInput?.value.trim();
+      const mega  = megaInput?.value.trim();
+      const pussy = pussyInput?.value.trim();
 
-    const payload = {
-      name, phone, store,
-      kiss_id:  kiss || null,
-      mega_id:  mega || null,
-      pussy_id: pussy || null,
-      created:  new Date().toISOString()
+      if (!name || !phone) return alert('姓名与手机号为必填项！');
+
+      const payload = {
+        name, phone, store,
+        kiss_id:  kiss || null,
+        mega_id:  mega || null,
+        pussy_id: pussy || null,
+        created:  new Date().toISOString()
+      };
+
+      const { error } = await supabase.from('customers').insert([payload]);
+      if (error) return alert('保存失败：' + error.message);
+
+      ['name','phone','kiss','mega','pussy'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      loadTable();
     };
+  }
 
-    const { error } = await supabase.from('customers').insert([payload]);
-    if (error) return alert('保存失败：' + error.message);
+  if (resetBtn) {
+    resetBtn.onclick = () => {
+      ['name','phone','kiss','mega','pussy'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+    };
+  }
 
-    ['name','phone','kiss','mega','pussy'].forEach(id => document.getElementById(id).value = '');
-    loadTable();
-  };
+  // ====== 表格事件：编辑ID / 删除 ======
+  if (tbody) {
+    tbody.addEventListener('click', async (e) => {
+      const edit = e.target.closest('.edit-btn');
+      if (edit) {
+        const id = edit.getAttribute('data-id');
+        if (!id) return;
 
-  document.getElementById('resetBtn').onclick = () => {
-    ['name','phone','kiss','mega','pussy'].forEach(id => document.getElementById(id).value = '');
-  };
+        const row = (allRows || []).find(r => String(r.id) === String(id)) || {};
 
-  // ====== 删除（仅管理员） ======
-  tbody.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.del-btn');
-    if (!btn) return;
-    const id = btn.getAttribute('data-id');
-    if (!id) return;
-    if (!confirm('确定要删除这条记录吗？')) return;
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) return alert('删除失败：' + error.message);
-    loadTable();
-  });
+        const kiss  = prompt('请输入 KISS ID',  row.kiss_id  ?? '') ;
+        if (kiss === null) return;  // 取消
+        const mega  = prompt('请输入 MEGA ID',  row.mega_id  ?? '') ;
+        if (mega === null) return;
+        const pussy = prompt('请输入 PUSSY ID', row.pussy_id ?? '') ;
+        if (pussy === null) return;
+
+        const payload = {
+          kiss_id:  kiss  || null,
+          mega_id:  mega  || null,
+          pussy_id: pussy || null
+        };
+
+        const { error } = await supabase.from('customers').update(payload).eq('id', id);
+        if (error) return alert('更新失败：' + error.message);
+        loadTable();
+        return;
+      }
+
+      const del = e.target.closest('.del-btn');
+      if (del) {
+        const id = del.getAttribute('data-id');
+        if (!id) return;
+        if (!confirm('确定要删除这条记录吗？')) return;
+        const { error } = await supabase.from('customers').delete().eq('id', id);
+        if (error) return alert('删除失败：' + error.message);
+        loadTable();
+      }
+    });
+  }
 </script>
 </body>
 </html>
+
 
 
 
