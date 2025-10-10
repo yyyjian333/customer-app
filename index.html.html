@@ -11,7 +11,7 @@
     }
     *{box-sizing:border-box}
     body{margin:0;background:linear-gradient(180deg,#0b1220,#111827);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";color:var(--text)}
-    header{position:sticky;top:0;z-index:10;background:rgba(15,23,42,.9);backdrop-filter: saturate(150%) blur(6px);border-bottom:1px solid #1f2937}
+    header{position:sticky;top:0;z-index:10;background:rgba(15,23,42,.9);backdrop-filter:saturate(150%) blur(6px);border-bottom:1px solid #1f2937}
     .container{max-width:1100px;margin:0 auto;padding:20px}
     h1{font-size:22px;margin:0}
     .card{background:var(--panel);border:1px solid #1f2937;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
@@ -34,6 +34,7 @@
     th{font-weight:600;color:#cbd5e1}
     tr:hover td{background:#0c1426}
     .empty{color:var(--sub);text-align:center;padding:24px}
+    .id-inp{padding:8px} /* 表格里ID输入框更紧凑 */
     @media (max-width:900px){.row{grid-template-columns:1fr}}
   </style>
 </head>
@@ -126,7 +127,7 @@
                     <th>KISS ID</th>
                     <th>MEGA ID</th>
                     <th>PUSSY ID</th>
-                    <!-- 操作列会由脚本自动追加 -->
+                    <!-- 操作列由脚本自动追加 -->
                   </tr>
                 </thead>
                 <tbody id="tbody">
@@ -141,7 +142,7 @@
     </section>
   </main>
 
-  <!-- 逻辑脚本：整段已集成（登录/保存/搜索/编辑ID/删除/多语言） -->
+  <!-- 逻辑脚本：登录/保存/搜索/表格内编辑ID/删除/多语言 -->
   <script type="module">
     // ====== Supabase 初始化 ======
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -245,29 +246,37 @@
     }
     searchBox.addEventListener('input', filterAndRender);
 
+    function escAttr(v){ return String(v ?? '').replace(/"/g,'&quot;'); }
+
     function renderTable(rows){
       tbody.innerHTML='';
-      if(!rows.length){ tbody.innerHTML = '<tr><td class="empty" colspan="7">暂无数据</td></tr>'; return; }
+      if(!rows || !rows.length){
+        tbody.innerHTML = '<tr><td class="empty" colspan="7">暂无数据</td></tr>';
+        return;
+      }
       rows.forEach(row=>{
         let displayPhone=String(row.phone||'');
-        if(!isAdmin){ displayPhone='*****'+displayPhone.slice(-5); }
+        if(!isAdmin){ displayPhone = '*****' + displayPhone.slice(-5); }
+
         const actions = isAdmin
-          ? `<button class="edit-btn" data-id="${row.id}">编辑ID</button> <button class="danger del-btn" data-id="${row.id}">删除</button>`
-          : `<button class="edit-btn" data-id="${row.id}">编辑ID</button>`;
+          ? `<button class="btn save-id-btn" data-id="${row.id}">保存ID</button>
+             <button class="btn danger del-btn" data-id="${row.id}">删除</button>`
+          : `<button class="btn save-id-btn" data-id="${row.id}">保存ID</button>`;
+
         const tr=document.createElement('tr');
         tr.innerHTML=`
           <td>${row.name||''}</td>
           <td>${displayPhone}</td>
           <td>${row.store||''}</td>
-          <td>${row.kiss_id||''}</td>
-          <td>${row.mega_id||''}</td>
-          <td>${row.pussy_id||''}</td>
+          <td><input class="id-inp" data-field="kiss_id"  value="${escAttr(row.kiss_id)}" /></td>
+          <td><input class="id-inp" data-field="mega_id"  value="${escAttr(row.mega_id)}" /></td>
+          <td><input class="id-inp" data-field="pussy_id" value="${escAttr(row.pussy_id)}" /></td>
           <td>${actions}</td>`;
         tbody.appendChild(tr);
       });
     }
 
-    // ====== 新增（name/phone 仅在新增时录入；之后通过“编辑ID”只改三项ID）=====
+    // ====== 新增（name/phone 仅在新增时录入；之后通过表格只改三项ID）=====
     saveBtn.onclick = async ()=>{
       const name=nameInput.value.trim();
       const phone=phoneInput.value.trim();
@@ -284,18 +293,20 @@
     };
     resetBtn.onclick=()=>{ ['name','phone','kiss','mega','pussy'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';}); };
 
-    // ====== 表格事件：编辑ID / 删除 ======
+    // ====== 表格事件：保存ID / 删除 ======
     tbody.addEventListener('click', async (e)=>{
-      const edit=e.target.closest('.edit-btn');
-      if(edit){
-        const id=edit.getAttribute('data-id'); if(!id) return;
-        const row=(allRows||[]).find(r=>String(r.id)===String(id))||{};
-        const kiss = prompt('请输入 KISS ID',  row.kiss_id ?? ''); if(kiss===null) return;
-        const mega = prompt('请输入 MEGA ID',  row.mega_id ?? ''); if(mega===null) return;
-        const pussy= prompt('请输入 PUSSY ID', row.pussy_id?? ''); if(pussy===null) return;
+      const save=e.target.closest('.save-id-btn');
+      if(save){
+        const id=save.getAttribute('data-id'); if(!id) return;
+        const tr=save.closest('tr');
+        const kiss = tr.querySelector('input[data-field="kiss_id"]')?.value.trim()  ?? '';
+        const mega = tr.querySelector('input[data-field="mega_id"]')?.value.trim()  ?? '';
+        const pussy= tr.querySelector('input[data-field="pussy_id"]')?.value.trim() ?? '';
         const payload={ kiss_id:kiss||null, mega_id:mega||null, pussy_id:pussy||null };
         const { error } = await supabase.from('customers').update(payload).eq('id', id);
         if(error) return alert('更新失败：'+error.message);
+        // 可选轻提示
+        // save.textContent='已保存'; setTimeout(()=>{save.textContent='保存ID';},1000);
         loadTable(); return;
       }
       const del=e.target.closest('.del-btn');
